@@ -60,6 +60,8 @@ ABCJS.write.AbstractEngraver = function(bagpipes, renderer, tuneNumber) {
 
 ABCJS.write.AbstractEngraver.prototype.reset = function() {
 	this.slurs = {};
+	this.dangers = {};
+	this.dangersbyvoice = {};
 	this.ties = [];
 	this.slursbyvoice = {};
 	this.tiesbyvoice = {};
@@ -93,6 +95,7 @@ ABCJS.write.AbstractEngraver.prototype.getCurrentVoiceId = function() {
 };
 
 ABCJS.write.AbstractEngraver.prototype.pushCrossLineElems = function() {
+  this.dangersbyvoice[this.getCurrentVoiceId()] = this.dangers;
   this.slursbyvoice[this.getCurrentVoiceId()] = this.slurs;
   this.tiesbyvoice[this.getCurrentVoiceId()] = this.ties;
   this.endingsbyvoice[this.getCurrentVoiceId()] = this.partstartelem;
@@ -100,6 +103,7 @@ ABCJS.write.AbstractEngraver.prototype.pushCrossLineElems = function() {
 
 ABCJS.write.AbstractEngraver.prototype.popCrossLineElems = function() {
   this.slurs = this.slursbyvoice[this.getCurrentVoiceId()] || {};
+  this.dangers = this.dangersbyvoice[this.getCurrentVoiceId()] || {};
   this.ties = this.tiesbyvoice[this.getCurrentVoiceId()] || [];
   this.partstartelem = this.endingsbyvoice[this.getCurrentVoiceId()];
 };
@@ -189,6 +193,7 @@ ABCJS.write.AbstractEngraver.prototype.createABCVoice = function(abcline, tempo)
     this.partstartelem = new ABCJS.write.EndingElem("", null, null);
     this.voice.addOther(this.partstartelem);
   }
+  
   for (var slur in this.slurs) {
     if (this.slurs.hasOwnProperty(slur)) {
       this.slurs[slur]= new ABCJS.write.TieElem(null, null, this.slurs[slur].above, this.slurs[slur].force, false);
@@ -196,6 +201,15 @@ ABCJS.write.AbstractEngraver.prototype.createABCVoice = function(abcline, tempo)
         this.voice.addOther(this.slurs[slur]);
     }
   }
+  
+  for (var danger in this.dangers) {
+    if (this.dangers.hasOwnProperty(danger)) {
+      this.dangers[danger]= new ABCJS.write.TieElem(null, null, this.dangers[danger].above, this.dangers[danger].force, false, "danger");
+		if (ABCJS.write.hint) this.dangers[danger].setHint();
+        this.voice.addOther(this.dangers[danger]);
+    }
+  }
+  
   for (var i=0; i<this.ties.length; i++) {
     this.ties[i]=new ABCJS.write.TieElem(null, null, this.ties[i].above, this.ties[i].force, true);
 	  if (ABCJS.write.hint) this.ties[i].setHint();
@@ -220,14 +234,18 @@ ABCJS.write.AbstractEngraver.prototype.createABCVoice = function(abcline, tempo)
 	ABCJS.write.AbstractEngraver.prototype.saveState = function() {
 		this.tiesSave = ABCJS.parse.cloneArray(this.ties);
 		this.slursSave = ABCJS.parse.cloneHashOfHash(this.slurs);
+		this.dangersSave = ABCJS.parse.cloneHashOfHash(this.dangers);
 		this.slursbyvoiceSave = ABCJS.parse.cloneHashOfHash(this.slursbyvoice);
+		this.dangersbyvoiceSave = ABCJS.parse.cloneHashOfHash(this.dangersbyvoice);
 		this.tiesbyvoiceSave = ABCJS.parse.cloneHashOfArrayOfHash(this.tiesbyvoice);
 	};
 	
 	ABCJS.write.AbstractEngraver.prototype.restoreState = function() {
 		this.ties = ABCJS.parse.cloneArray(this.tiesSave);
 		this.slurs = ABCJS.parse.cloneHashOfHash(this.slursSave);
+		this.dangers = ABCJS.parse.cloneHashOfHash(this.dangersSave);
 		this.slursbyvoice = ABCJS.parse.cloneHashOfHash(this.slursbyvoiceSave);
+		this.dangersbyvoice = ABCJS.parse.cloneHashOfHash(this.dangersbyvoiceSave);
 		this.tiesbyvoice = ABCJS.parse.cloneHashOfArrayOfHash(this.tiesbyvoiceSave);
 	};
 
@@ -487,36 +505,53 @@ ABCJS.write.AbstractEngraver.prototype.createNote = function(elem, nostem, dontD
          flag = this.chartable[(dir==="down")?"dflags":"uflags"][-durlog];
         }
       }
-		c = noteSymbol;
+	  c = noteSymbol;
                 // The highest position for the sake of placing slurs is itself if the slur is internal. It is the highest position possible if the slur is for the whole chord.
                 // If the note is the only one in the chord, then any slur it has counts as if it were on the whole chord.
                 elem.pitches[p].highestVert = elem.pitches[p].verticalPos;
                 var isTopWhenStemIsDown = (this.stemdir==="up" || dir==="up") && p===0;
                 var isBottomWhenStemIsUp = (this.stemdir==="down" || dir==="down") && p===pp-1;
-      if (!dontDraw && (isTopWhenStemIsDown || isBottomWhenStemIsUp)) { // place to put slurs if not already on pitches
+				if (!dontDraw && (isTopWhenStemIsDown || isBottomWhenStemIsUp)) { // place to put slurs if not already on pitches
 
-                 if (elem.startSlur || pp === 1) {
-                 elem.pitches[p].highestVert = elem.pitches[pp-1].verticalPos;
-                 if (this.stemdir==="up" || dir==="up")
-                                        elem.pitches[p].highestVert += 6;        // If the stem is up, then compensate for the length of the stem
-                 }
-                         if (elem.startSlur) {
-          if (!elem.pitches[p].startSlur) elem.pitches[p].startSlur = []; //TODO possibly redundant, provided array is not optional
-         for (i=0; i<elem.startSlur.length; i++) {
-         elem.pitches[p].startSlur.push(elem.startSlur[i]);
-         }
-        }
+					 if (elem.startDanger || elem.startSlur || pp === 1) {
+						 elem.pitches[p].highestVert = elem.pitches[pp-1].verticalPos;
+						 if (this.stemdir==="up" || dir==="up")
+							elem.pitches[p].highestVert += 6;        // If the stem is up, then compensate for the length of the stem
+					 }
+                     if (elem.startSlur) {
+						 if (!elem.pitches[p].startSlur) elem.pitches[p].startSlur = []; //TODO possibly redundant, provided array is not optional
+						 for (i=0; i<elem.startSlur.length; i++) {
+							elem.pitches[p].startSlur.push(elem.startSlur[i]);
+						 }
+					 }
+					 
+					 if (elem.startDanger) {
+						 if (!elem.pitches[p].startDanger) elem.pitches[p].startDanger = []; //TODO possibly redundant, provided array is not optional
+						 for (i=0; i<elem.startDanger.length; i++) {
+							elem.pitches[p].startDanger.push(elem.startDanger[i]);
+						 }
+					 }
 
-        if (!dontDraw && elem.endSlur) {
-                        elem.pitches[p].highestVert = elem.pitches[pp-1].verticalPos;
-                        if (this.stemdir==="up" || dir==="up")
-                                elem.pitches[p].highestVert += 6;        // If the stem is up, then compensate for the length of the stem
-          if (!elem.pitches[p].endSlur) elem.pitches[p].endSlur = []; //TODO possibly redundant, provided array is not optional
-         for (i=0; i<elem.endSlur.length; i++) {
-         elem.pitches[p].endSlur.push(elem.endSlur[i]);
-         }
-        }
-      }
+					if (!dontDraw && elem.endSlur) {
+						elem.pitches[p].highestVert = elem.pitches[pp-1].verticalPos;
+						if (this.stemdir==="up" || dir==="up")
+							elem.pitches[p].highestVert += 6;        // If the stem is up, then compensate for the length of the stem
+						if (!elem.pitches[p].endSlur) elem.pitches[p].endSlur = []; //TODO possibly redundant, provided array is not optional
+						for (i=0; i<elem.endSlur.length; i++) {
+							elem.pitches[p].endSlur.push(elem.endSlur[i]);
+						}
+					}
+					
+					if (!dontDraw && elem.endDanger) {
+						elem.pitches[p].highestVert = elem.pitches[pp-1].verticalPos;
+						if (this.stemdir==="up" || dir==="up")
+							elem.pitches[p].highestVert += 6;        // If the stem is up, then compensate for the length of the stem
+						if (!elem.pitches[p].endDanger) elem.pitches[p].endDanger = []; //TODO possibly redundant, provided array is not optional
+						for (i=0; i<elem.endDanger.length; i++) {
+							elem.pitches[p].endDanger.push(elem.endDanger[i]);
+						}
+					}
+				}
 
 		var hasStem = !nostem && durlog<=-1;
                 if (!dontDraw)
@@ -839,6 +874,32 @@ ABCJS.write.AbstractEngraver.prototype.createNoteHead = function(abselem, c, pit
     }
   }
   
+  if (pitchelem.endDanger) {
+	  var dangerid = 102;
+	  var danger;
+	  if (this.dangers[dangerid]) {
+		danger = this.dangers[dangerid];
+		  danger.setEndAnchor(notehead);
+		delete this.dangers[dangerid];
+	  } else {
+		danger = new ABCJS.write.TieElem(null, notehead, dir==="down",(this.stemdir==="up" || dir==="down") && this.stemdir!=="down", false, "danger");
+		  if (ABCJS.write.hint) danger.setHint();
+		this.voice.addOther(danger);
+	  }
+	  if (this.startlimitelem) {
+		danger.setStartX(this.startlimitelem);
+	  }
+  }
+  
+  if (pitchelem.startDanger) {
+	  var dangerid = 102;
+	  //PER: bug fix: var danger = new ABCJS.write.TieElem(notehead, null, (this.stemdir=="up" || dir=="down") && this.stemdir!="down", this.stemdir);
+	  var danger = new ABCJS.write.TieElem(notehead, null, (this.stemdir==="down" || dir==="down") && this.stemdir!=="up", false, false, "danger");
+		if (ABCJS.write.hint) danger.setHint();
+	  this.dangers[dangerid]=danger;
+	  this.voice.addOther(danger);
+  }
+  
   return notehead;
 
 };
@@ -864,6 +925,11 @@ ABCJS.write.AbstractEngraver.prototype.createBarLine = function (elem) {
     for (var slur in this.slurs) {
       if (this.slurs.hasOwnProperty(slur)) {
         this.slurs[slur].setEndX(abselem);
+      }
+    }
+    for (var danger in this.dangers) {
+      if (this.dangers.hasOwnProperty(danger)) {
+        this.dangers[danger].setEndX(abselem);
       }
     }
     this.startlimitelem = abselem;

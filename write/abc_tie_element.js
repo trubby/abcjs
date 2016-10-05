@@ -22,12 +22,14 @@ if (!window.ABCJS)
 if (!window.ABCJS.write)
 	window.ABCJS.write = {};
 
-ABCJS.write.TieElem = function(anchor1, anchor2, above, forceandshift, isTie) {
+// add attr "choies" to check this element are normal or danger. ------------------------------
+ABCJS.write.TieElem = function(anchor1, anchor2, above, forceandshift, isTie, choies) {
 	this.anchor1 = anchor1; // must have a .x and a .pitch, and a .parent property or be null (means starts at the "beginning" of the line - after keysig)
 	this.anchor2 = anchor2; // must have a .x and a .pitch property or be null (means ends at the end of the line)
 	this.above = above; // true if the arc curves above
 	this.force = forceandshift; // force the arc curve, regardless of beaming if true
 	this.isTie = isTie;
+	this.choies = choies;
 };
 
 ABCJS.write.TieElem.prototype.setEndAnchor = function(anchor2) {
@@ -102,12 +104,13 @@ ABCJS.write.TieElem.prototype.layout = function (lineStartX, lineEndX) {
 	}
 };
 
-ABCJS.write.TieElem.prototype.draw = function (renderer, linestartx, lineendx) {
+// add attr "choies" to check this element are normal or danger. ------------------------------
+ABCJS.write.TieElem.prototype.draw = function (renderer, linestartx, lineendx, choies) {
 	this.layout(linestartx, lineendx);
 
 	var klass;
 	if (this.hint)
 			klass = "abcjs-hint";
-	renderer.drawArc(this.startX, this.endX, this.startY, this.endY,  this.above, klass);
+	renderer.drawArc(this.startX, this.endX, this.startY, this.endY,  this.above, klass, choies);
 
 };

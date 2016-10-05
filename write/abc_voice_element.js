@@ -258,8 +258,10 @@ ABCJS.write.VoiceElement.prototype.draw = function (renderer, bartop) {
 	window.ABCJS.parse.each(this.otherchildren, function(child) {
 		if (child === 'bar')
 			renderer.measureNumber++;
-		else
-			child.draw(renderer,self.startx+10,width);
+		else {
+			// put "child.choies" into function for check if this element are normal or danger. ------------------------------
+			child.draw(renderer,self.startx+10,width, child.choies);
+		}
 	});
 
 };

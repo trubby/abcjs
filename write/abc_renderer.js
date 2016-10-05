@@ -558,15 +558,22 @@ ABCJS.write.Renderer.prototype.printPath = function (attrs) {
   return ret;
 };
 
-ABCJS.write.Renderer.prototype.drawArc = function(x1, x2, pitch1, pitch2, above, klass) {
-
-
+ABCJS.write.Renderer.prototype.drawArc = function(x1, x2, pitch1, pitch2, above, klass, choies) {
+	
   x1 = x1 + 6;
   x2 = x2 + 4;
   pitch1 = pitch1 + ((above)?1.5:-1.5);
   pitch2 = pitch2 + ((above)?1.5:-1.5);
   var y1 = this.calcY(pitch1);
   var y2 = this.calcY(pitch2);
+  
+  
+	var ret;
+	if(choies == "danger") {
+		pathString = ABCJS.write.sprintf("M%f,%f L%f,%f", x1, y1, x2, y2);
+	  ret = this.paper.path(pathString);
+	  ret.node.setAttribute("style", "stroke: rgb(255,0,0); stroke-width: 2;");
+	} else {
 
   //unit direction vector
   var dx = x2-x1;
@@ -590,7 +597,11 @@ ABCJS.write.Renderer.prototype.drawArc = function(x1, x2, pitch1, pitch2, above,
 		klass += ' slur';
 	else
 		klass = 'slur';
-  var ret = this.paper.path().attr({path:pathString, stroke:"none", fill:"#000000", 'class': this.addClasses(klass)});
+	
+	ret = this.paper.path().attr({path:pathString, stroke:"none", fill:"#000000", 'class': this.addClasses(klass)});
+		
+	}
+  
   if (this.doRegression) this.addToRegression(ret);
 
   return ret;
