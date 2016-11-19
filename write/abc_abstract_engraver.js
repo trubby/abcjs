@@ -164,8 +164,12 @@ ABCJS.write.AbstractEngraver.prototype.createABCStaff = function(abcstaff, tempo
     }
     if (abcstaff.title && abcstaff.title[this.v]) this.voice.header=abcstaff.title[this.v];
 	  var clef = ABCJS.write.createClef(abcstaff.clef, this.tuneNumber);
-	  if (clef)
-    this.voice.addChild(clef);
+	  if (clef) {
+		  if (this.v ===0 && abcstaff.barNumber) {
+			  this.addMeasureNumber(abcstaff.barNumber, clef);
+		  }
+		  this.voice.addChild(clef);
+	  }
 	  var keySig = ABCJS.write.createKeySignature(abcstaff.key, this.tuneNumber);
 	  if (keySig) {
 		  this.voice.addChild(keySig);
@@ -904,6 +908,11 @@ ABCJS.write.AbstractEngraver.prototype.createNoteHead = function(abselem, c, pit
 
 };
 
+ABCJS.write.AbstractEngraver.prototype.addMeasureNumber = function (number, abselem) {
+	var measureNumHeight = this.renderer.getTextSize(number, "measurefont", 'bar-number');
+	abselem.addChild(new ABCJS.write.RelativeElement(number, 0, 0, 11+measureNumHeight.height / ABCJS.write.spacing.STEP, {type:"barNumber"}));
+};
+
 ABCJS.write.AbstractEngraver.prototype.createBarLine = function (elem) {
 // bar_thin, bar_thin_thick, bar_thin_thin, bar_thick_thin, bar_right_repeat, bar_left_repeat, bar_double_repeat
 
@@ -911,6 +920,9 @@ ABCJS.write.AbstractEngraver.prototype.createBarLine = function (elem) {
   var anchor = null; // place to attach part lines
   var dx = 0;
 
+	if (elem.barNumber) {
+		this.addMeasureNumber(elem.barNumber, abselem);
+	}
 
 
   var firstdots = (elem.type==="bar_right_repeat" || elem.type==="bar_dbl_repeat");
