@@ -558,6 +558,7 @@ ABCJS.write.Renderer.prototype.printPath = function (attrs) {
   return ret;
 };
 
+// add "choies" attr and make this function can draw line. --------------------------
 ABCJS.write.Renderer.prototype.drawArc = function(x1, x2, pitch1, pitch2, above, klass, choies) {
 	
   x1 = x1 + 6;
@@ -567,7 +568,7 @@ ABCJS.write.Renderer.prototype.drawArc = function(x1, x2, pitch1, pitch2, above,
   var y1 = this.calcY(pitch1);
   var y2 = this.calcY(pitch2);
   
-  
+    // check if "choies" are danger or not. --------------------------
 	var ret;
 	if(choies == "danger") {
 		pathString = ABCJS.write.sprintf("M%f,%f L%f,%f", x1, y1, x2, y2);
