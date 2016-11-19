@@ -405,6 +405,24 @@ window.ABCJS.parse.Parse = function() {
 		ret.consumed = i-start;
 		return ret;
 	};
+	
+	var letter_to_open_danger =  function(line, i) {
+		// consume spaces, and look for all the open parens. If there is a number after the open paren,
+		// that is a triplet. Otherwise that is a slur. Collect all the slurs and the first triplet.
+		var ret = {};
+		var start = i;
+		while (line.charAt(i) === '/' || tokenizer.isWhiteSpace(line.charAt(i))) {
+			if (line.charAt(i) === '/') {
+				if (ret.startDanger === undefined)
+						ret.startDanger = 1;
+					else
+						ret.startDanger++;
+			}
+			i++;
+		}
+		ret.consumed = i-start;
+		return ret;
+	};
 
 	var addWords = function(line, words) {
 		if (!line) { warn("Can't add words before the first line of music", line, 0); return; }
@@ -606,6 +624,18 @@ window.ABCJS.parse.Parse = function() {
 						if (el.endSlur === undefined) el.endSlur = 1; else el.endSlur++;
 					} else return null;
 					break;
+					
+				case '/':
+					if (el.startDanger === undefined) el.startDanger = 1; else el.startDanger++;
+					if (isComplete(state)) {el.endChar = index;return el;}
+					else return null;
+					break;
+				case '\\':
+					if (isComplete(state)) {
+						if (el.endDanger === undefined) el.endDanger = 1; else el.endDanger++;
+					} else return null;
+					break;
+					
 				case '^':
 					if (state === 'startSlur') {el.accidental = 'sharp';state = 'sharp2';}
 					else if (state === 'sharp2') {el.accidental = 'dblsharp';state = 'pitch';}
@@ -668,6 +698,8 @@ window.ABCJS.parse.Parse = function() {
 						el.rest = { type: rests[line.charAt(index)] };
 						// There shouldn't be some of the properties that notes have. If some sneak in due to bad syntax in the abc file,
 						// just nix them here.
+						delete el.startDanger;
+						delete el.endDanger;
 						delete el.accidental;
 						delete el.startSlur;
 						delete el.startTie;
@@ -1177,6 +1209,14 @@ window.ABCJS.parse.Parse = function() {
 						}
 						i += ret.consumed;
 					}
+					
+					ret = letter_to_open_danger(line, i);
+					if (ret.consumed > 0) {
+						if (ret.startDanger !== undefined)
+							el.startDanger = ret.startDanger;
+						
+						i += ret.consumed;
+					}
 
 					// handle chords.
 					if (line.charAt(i) === '[') {
@@ -1243,6 +1283,9 @@ window.ABCJS.parse.Parse = function() {
 												break;
 											case ')':
 												if (el.endSlur === undefined) el.endSlur = 1; else el.endSlur++;
+												break;
+											case '\\':
+												if (el.endDanger === undefined) el.endDanger = 1; else el.endDanger++;
 												break;
 											case '-':
 												window.ABCJS.parse.each(el.pitches, function(pitch) { pitch.startTie = {}; });
@@ -1315,17 +1358,29 @@ window.ABCJS.parse.Parse = function() {
 								// TODO-PER: straighten this out so there is not so much copying: getCoreNote shouldn't change e'
 								if (core.accidental !== undefined) el.pitches[0].accidental = core.accidental;
 								el.pitches[0].pitch = core.pitch;
+								
+								if (core.endDanger !== undefined) el.pitches[0].endDanger = core.endDanger;
+								
 								if (core.endSlur !== undefined) el.pitches[0].endSlur = core.endSlur;
 								if (core.endTie !== undefined) el.pitches[0].endTie = core.endTie;
 								if (core.startSlur !== undefined) el.pitches[0].startSlur = core.startSlur;
 								if (el.startSlur !== undefined) el.pitches[0].startSlur = el.startSlur;
+								
+								if (core.startDanger !== undefined) el.pitches[0].startDanger = core.startDanger;
+								if (el.startDanger !== undefined) el.pitches[0].startDanger = el.startDanger;
+								
 								if (core.startTie !== undefined) el.pitches[0].startTie = core.startTie;
 								if (el.startTie !== undefined) el.pitches[0].startTie = el.startTie;
 							} else {
 								el.rest = core.rest;
+								if (core.endDanger !== undefined) el.endDanger = core.endDanger;
+								
 								if (core.endSlur !== undefined) el.endSlur = core.endSlur;
 								if (core.endTie !== undefined) el.rest.endTie = core.endTie;
 								if (core.startSlur !== undefined) el.startSlur = core.startSlur;
+								
+								if (core.startDanger !== undefined) el.startDanger = core.startDanger;
+								
 								if (core.startTie !== undefined) el.rest.startTie = core.startTie;
 								if (el.startTie !== undefined) el.rest.startTie = el.startTie;
 							}
@@ -1334,6 +1389,7 @@ window.ABCJS.parse.Parse = function() {
 							if (core.duration !== undefined) el.duration = core.duration;
 							if (core.decoration !== undefined) el.decoration = core.decoration;
 							if (core.graceNotes !== undefined) el.graceNotes = core.graceNotes;
+							delete el.startDanger;
 							delete el.startSlur;
 							if (multilineVars.inTie) {
 								if (el.pitches !== undefined) {
