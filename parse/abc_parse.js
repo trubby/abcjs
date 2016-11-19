@@ -31,6 +31,68 @@ window.ABCJS.parse.Parse = function() {
 		return tune;
 	};
 
+	//Parallel
+	var harmoChordPre = [];
+	var harmoIndexPre;
+	var linePre;
+	var conChord = 0;
+	var noteNum = function(inNote) {
+		switch(inNote) {
+			case "C": return 1;
+			case "^C": return 2;
+			case "_D": return 2;
+			case "D": return 3;
+			case "^D": return 4;
+			case "_E": return 4;
+			case "E": return 5;
+			case "F": return 6;
+			case "^F": return 7;
+			case "_G": return 7;
+			case "G": return 8;
+			case "^G": return 9;
+			case "_A": return 9;
+			case "A": return 10;
+			case "^A": return 11;
+			case "_B": return 11;
+			case "B": return 12;
+			
+			case "c": return 13;
+			case "^c": return 14;
+			case "_d": return 14;
+			case "d": return 15;
+			case "^d": return 16;
+			case "_e": return 16;
+			case "e": return 17;
+			case "f": return 18;
+			case "^f": return 19;
+			case "_g": return 19;
+			case "g": return 20;
+			case "^g": return 21;
+			case "_a": return 21;
+			case "a": return 22;
+			case "^a": return 23;
+			case "_b": return 23;
+			case "b": return 24;
+			
+			default: break;
+		}
+	}
+	
+	var parallelHarmonyCheck = function(chord1,chord2){
+		var fchk = '0';
+		var ochk = '0';
+		var chr_num1 = Math.abs(noteNum(chord1[1]) - noteNum(chord1[2]));
+		var chr_num2 = Math.abs(noteNum(chord2[1]) - noteNum(chord2[2]));
+		
+		if(chr_num1 == chr_num2 && chr_num1 == 7)
+			fchk = '1';
+		if(chr_num1 == chr_num2 && chr_num2 == 12)
+			ochk = '1';
+		
+		return fchk + ochk;
+	}
+	//end Parallel
+	
 	function addPositioning(el, type, value) {
 		if (!el.positioning) el.positioning = {};
 		el.positioning[type] = value;
@@ -132,6 +194,14 @@ window.ABCJS.parse.Parse = function() {
 			encode(line.substring(col_num+1));
 		addWarning("Music Line:" + tune.getNumLines() + ":" + (col_num+1) + ': ' + str + ":  " + clean_line);
 	};
+	
+	var warnChord = function(str, line, col_num, chd, chd2) {
+		var bad_chord = chd.join('') + chd2.join('');
+		var clean_line = 
+			'<span style="text-decoration:underline;font-size:1.3em;font-weight:bold;">' + bad_chord + '</span>';
+		addWarning("Music Line:" + line + ":" + (col_num+1) + ': ' + str + ":  " + clean_line);
+	};
+	
 	var header = new window.ABCJS.parse.ParseHeader(tokenizer, warn, multilineVars, tune);
 
 	this.getWarnings = function() {
@@ -1220,6 +1290,15 @@ window.ABCJS.parse.Parse = function() {
 
 					// handle chords.
 					if (line.charAt(i) === '[') {
+						//
+						var harmoChord = ['['];
+						var harmoIndex = i;
+						if(conChord > 0)
+							conChord = 2;
+						else
+							conChord = 1;
+						//
+						
 						var chordStartChar = i;
 						i++;
 						var chordDuration = null;
@@ -1227,6 +1306,7 @@ window.ABCJS.parse.Parse = function() {
 						var done = false;
 						while (!done) {
 							var chordNote = getCoreNote(line, i, {}, false);
+							harmoChord.push(line.charAt(i));
 							if (chordNote !== null) {
 								if (chordNote.end_beam) {
 									el.end_beam = true;
@@ -1346,8 +1426,23 @@ window.ABCJS.parse.Parse = function() {
 								done = true;
 							}
 						}
-
+						
+						//Harmony check
+						if(conChord == 2) {
+							var harmoChk= parallelHarmonyCheck(harmoChordPre,harmoChord);
+							if(harmoChk.charAt(0) == 1)
+								warnChord("Consecutive fifths found!",linePre,harmoIndexPre,harmoChordPre,harmoChord);
+							if(harmoChk.charAt(1) == 1) 
+								warnChord("Consecutive octave found!",linePre,harmoIndexPre,harmoChordPre,harmoChord);
+						}
+						harmoChordPre = harmoChord;
+						harmoIndexPre = harmoIndex;
+						linePre = tune.getNumLines();
+						//
+						
 					} else {
+						conChord = 0;
+						
 						// Single pitch
 						var el2 = {};
 						var core = getCoreNote(line, i, el2, true);
