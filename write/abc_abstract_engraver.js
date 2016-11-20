@@ -879,29 +879,33 @@ ABCJS.write.AbstractEngraver.prototype.createNoteHead = function(abselem, c, pit
   }
   
   if (pitchelem.endDanger) {
-	  var dangerid = 102;
-	  var danger;
-	  if (this.dangers[dangerid]) {
-		danger = this.dangers[dangerid];
-		  danger.setEndAnchor(notehead);
-		delete this.dangers[dangerid];
-	  } else {
-		danger = new ABCJS.write.TieElem(null, notehead, dir==="down",(this.stemdir==="up" || dir==="down") && this.stemdir!=="down", false, "danger");
-		  if (ABCJS.write.hint) danger.setHint();
-		this.voice.addOther(danger);
-	  }
-	  if (this.startlimitelem) {
-		danger.setStartX(this.startlimitelem);
+	  for (i=0; i<pitchelem.endDanger.length; i++) {
+		  var dangerid = pitchelem.endDanger[i];
+		  var danger;
+		  if (this.dangers[dangerid]) {
+			danger = this.dangers[dangerid];
+			  danger.setEndAnchor(notehead);
+			delete this.dangers[dangerid];
+		  } else {
+			danger = new ABCJS.write.TieElem(null, notehead, dir==="down",(this.stemdir==="up" || dir==="down") && this.stemdir!=="down", false, "danger");
+			  if (ABCJS.write.hint) danger.setHint();
+			this.voice.addOther(danger);
+		  }
+		  if (this.startlimitelem) {
+			danger.setStartX(this.startlimitelem);
+		  }
 	  }
   }
   
   if (pitchelem.startDanger) {
-	  var dangerid = 102;
-	  //PER: bug fix: var danger = new ABCJS.write.TieElem(notehead, null, (this.stemdir=="up" || dir=="down") && this.stemdir!="down", this.stemdir);
-	  var danger = new ABCJS.write.TieElem(notehead, null, (this.stemdir==="down" || dir==="down") && this.stemdir!=="up", false, false, "danger");
-		if (ABCJS.write.hint) danger.setHint();
-	  this.dangers[dangerid]=danger;
-	  this.voice.addOther(danger);
+	  for (i=0; i<pitchelem.startDanger.length; i++) {
+		  var dangerid = pitchelem.startDanger[i].label;
+		  //PER: bug fix: var danger = new ABCJS.write.TieElem(notehead, null, (this.stemdir=="up" || dir=="down") && this.stemdir!="down", this.stemdir);
+		  var danger = new ABCJS.write.TieElem(notehead, null, (this.stemdir==="down" || dir==="down") && this.stemdir!=="up", false, false, "danger");
+			if (ABCJS.write.hint) danger.setHint();
+		  this.dangers[dangerid]=danger;
+		  this.voice.addOther(danger);
+	  }
   }
   
   return notehead;

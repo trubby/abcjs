@@ -101,7 +101,7 @@ window.ABCJS.data.Tune = function() {
 		this.lineNum = 0;
 	};
 
-	this.cleanUp = function(defWidth, defLength, barsperstaff, staffnonote, currSlur) {
+	this.cleanUp = function(defWidth, defLength, barsperstaff, staffnonote, currSlur, status) {
 		this.closeLine();	// Close the last line.
 
 		// Remove any blank lines
@@ -332,6 +332,133 @@ window.ABCJS.data.Tune = function() {
 				}
 			}
 		}
+		
+		//---------------------------------------------
+		
+		function cleanUpDangersInLine(line) {
+			var x;
+//			var lyr = null;	// TODO-PER: debugging.
+
+			var addEndDanger = function(obj, num, chordPos) {
+				if (currSlur[chordPos] === undefined) {
+					// There isn't an exact match for note position, but we'll take any other open Danger.
+					for (x = 0; x < currSlur.length; x++) {
+						if (currSlur[x] !== undefined) {
+							chordPos = x;
+							break;
+						}
+					}
+					if (currSlur[chordPos] === undefined) {
+						var offNum = chordPos*100+1;
+						window.ABCJS.parse.each(obj.endDanger, function(x) { if (offNum === x) --offNum; });
+						currSlur[chordPos] = [offNum];
+					}
+				}
+				var DangerNum;
+				for (var i = 0; i < num; i++) {
+					DangerNum = currSlur[chordPos].pop();
+					obj.endDanger.push(DangerNum);
+//					lyr.syllable += '<' + DangerNum;	// TODO-PER: debugging
+				}
+				if (currSlur[chordPos].length === 0)
+					delete currSlur[chordPos];
+				return DangerNum;
+			};
+
+			var addStartDanger = function(obj, num, chordPos, usedNums) {
+				obj.startDanger = [];
+				if (currSlur[chordPos] === undefined) {
+					currSlur[chordPos] = [];
+				}
+				var nextNum = chordPos*100+1;
+				for (var i = 0; i < num; i++) {
+					if (usedNums) {
+						window.ABCJS.parse.each(usedNums, function(x) { if (nextNum === x) ++nextNum; });
+						window.ABCJS.parse.each(usedNums, function(x) { if (nextNum === x) ++nextNum; });
+						window.ABCJS.parse.each(usedNums, function(x) { if (nextNum === x) ++nextNum; });
+					}
+					window.ABCJS.parse.each(currSlur[chordPos], function(x) { if (nextNum === x) ++nextNum; });
+					window.ABCJS.parse.each(currSlur[chordPos], function(x) { if (nextNum === x) ++nextNum; });
+
+					currSlur[chordPos].push(nextNum);
+					obj.startDanger.push({ label: nextNum });
+//					lyr.syllable += ' ' + nextNum + '>';	// TODO-PER:debugging
+					nextNum++;
+				}
+			};
+
+			for (var i = 0; i < line.length; i++) {
+				var el = line[i];
+//				if (el.lyric === undefined)	// TODO-PER: debugging
+//					el.lyric = [{ divider: '-' }];	// TODO-PER: debugging
+//				lyr = el.lyric[0];	// TODO-PER: debugging
+//				lyr.syllable = '';	// TODO-PER: debugging
+				if (el.el_type === 'note') {
+					if (el.gracenotes) {
+						for (var g = 0; g < el.gracenotes.length; g++) {
+							if (el.gracenotes[g].endDanger) {
+								var gg = el.gracenotes[g].endDanger;
+								el.gracenotes[g].endDanger = [];
+								for (var ggg = 0; ggg < gg; ggg++)
+									addEndDanger(el.gracenotes[g], 1, 20);
+							}
+							if (el.gracenotes[g].startDanger) {
+								x = el.gracenotes[g].startDanger;
+								addStartDanger(el.gracenotes[g], x, 20);
+							}
+						}
+					}
+					if (el.endDanger) {
+						x = el.endDanger;
+						el.endDanger = [];
+						addEndDanger(el, x, 0);
+					}
+					if (el.startDanger) {
+						x = el.startDanger;
+						addStartDanger(el, x, 0);
+					}
+					if (el.pitches) {
+						var usedNums = [];
+						for (var p = 0; p < el.pitches.length; p++) {
+							if (el.pitches[p].endDanger) {
+								var k = el.pitches[p].endDanger;
+								el.pitches[p].endDanger = [];
+								for (var j = 0; j < k; j++) {
+									var DangerNum = addEndDanger(el.pitches[p], 1, p+1);
+									usedNums.push(DangerNum);
+								}
+							}
+						}
+						for (p = 0; p < el.pitches.length; p++) {
+							if (el.pitches[p].startDanger) {
+								x = el.pitches[p].startDanger;
+								addStartDanger(el.pitches[p], x, p+1, usedNums);
+							}
+						}
+						// Correct for the weird gracenote case where ({g}a) should match.
+						// The end Danger was already assigned to the note, and needs to be moved to the first note of the graces.
+						if (el.gracenotes && el.pitches[0].endDanger && el.pitches[0].endDanger[0] === 100 && el.pitches[0].startDanger) {
+							if (el.gracenotes[0].endDanger)
+								el.gracenotes[0].endDanger.push(el.pitches[0].startDanger[0].label);
+							else
+								el.gracenotes[0].endDanger = [el.pitches[0].startDanger[0].label];
+							if (el.pitches[0].endDanger.length === 1)
+								delete el.pitches[0].endDanger;
+							else if (el.pitches[0].endDanger[0] === 100)
+								el.pitches[0].endDanger.shift();
+							else if (el.pitches[0].endDanger[el.pitches[0].endDanger.length-1] === 100)
+								el.pitches[0].endDanger.pop();
+							if (currSlur[1].length === 1)
+								delete currSlur[1];
+							else
+								currSlur[1].pop();
+						}
+					}
+				}
+			}
+		}
+		
+		//---------------------------------------------
 
 		// TODO-PER: This could be done faster as we go instead of as the last step.
 		function fixClefPlacement(el) {
@@ -378,7 +505,11 @@ window.ABCJS.data.Tune = function() {
 				for (this.voiceNum = 0; this.voiceNum < this.lines[this.lineNum].staff[this.staffNum].voices.length; this.voiceNum++) {
 //					var el = this.getLastNote();
 //					if (el) el.end_beam = true;
-					cleanUpSlursInLine(this.lines[this.lineNum].staff[this.staffNum].voices[this.voiceNum]);
+					if(status == "slurs") {
+						cleanUpSlursInLine(this.lines[this.lineNum].staff[this.staffNum].voices[this.voiceNum]);
+					} else if(status == "dangers") {
+						cleanUpDangersInLine(this.lines[this.lineNum].staff[this.staffNum].voices[this.voiceNum]);
+					}
 					for (var j = 0; j < this.lines[this.lineNum].staff[this.staffNum].voices[this.voiceNum].length; j++)
 						if (this.lines[this.lineNum].staff[this.staffNum].voices[this.voiceNum][j].el_type === 'clef')
 							fixClefPlacement(this.lines[this.lineNum].staff[this.staffNum].voices[this.voiceNum][j]);

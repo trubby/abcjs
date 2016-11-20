@@ -141,6 +141,7 @@ window.ABCJS.parse.Parse = function() {
 			this.ornamentPosition = "auto";
 			this.volumePosition = "auto";
 			this.openSlurs = [];
+			this.openDangers = [];
 		},
 		differentFont: function(type, defaultFonts) {
 			if (this[type].decoration !== defaultFonts[type].decoration) return true;
@@ -677,7 +678,7 @@ window.ABCJS.parse.Parse = function() {
 	var getCoreNote = function(line, index, el, canHaveBrokenRhythm) {
 		//var el = { startChar: index };
 		var isComplete = function(state) {
-			return (state === 'octave' || state === 'duration' || state === 'Zduration' || state === 'broken_rhythm' || state === 'end_slur');
+			return (state == 'startDanger' || state === 'octave' || state === 'duration' || state === 'Zduration' || state === 'broken_rhythm' || state === 'end_slur');
 		};
 		var state = 'startSlur';
 		var durationSetByPreviousNote = false;
@@ -696,8 +697,10 @@ window.ABCJS.parse.Parse = function() {
 					break;
 					
 				case '/':
-					if (el.startDanger === undefined) el.startDanger = 1; else el.startDanger++;
-					if (isComplete(state)) {el.endChar = index;return el;}
+					if (state === 'startSlur') {
+						state = 'startDanger';
+						if (el.startDanger === undefined) el.startDanger = 1; else el.startDanger++;
+					} else if (isComplete(state)) {el.endChar = index;return el;}
 					else return null;
 					break;
 				case '\\':
@@ -737,7 +740,7 @@ window.ABCJS.parse.Parse = function() {
 				case 'e':
 				case 'f':
 				case 'g':
-					if (state === 'startSlur' || state === 'sharp2' || state === 'flat2' || state === 'pitch') {
+					if (state === 'startDanger' || state === 'startSlur' || state === 'sharp2' || state === 'flat2' || state === 'pitch') {
 						el.pitch = pitches[line.charAt(index)];
 						state = 'octave';
 						// At this point we have a valid note. The rest is optional. Set the duration in case we don't get one below
@@ -764,7 +767,7 @@ window.ABCJS.parse.Parse = function() {
 				case 'y':
 				case 'z':
 				case 'Z':
-					if (state === 'startSlur') {
+					if (state === 'startSlur' || state === 'startDanger') {
 						el.rest = { type: rests[line.charAt(index)] };
 						// There shouldn't be some of the properties that notes have. If some sneak in due to bad syntax in the abc file,
 						// just nix them here.
@@ -831,7 +834,7 @@ window.ABCJS.parse.Parse = function() {
 					} else return null;
 					break;
 				case '-':
-					if (state === 'startSlur') {
+					if (state === 'startSlur' || state === 'startDanger') {
 						// This is the first character, so it must have been meant for the previous note. Correct that here.
 						tune.addTieToLastNote();
 						el.endTie = true;
@@ -1667,7 +1670,8 @@ window.ABCJS.parse.Parse = function() {
 				ph = pl;
 				pl = x;
 			}
-			multilineVars.openSlurs = tune.cleanUp(pl, ph, multilineVars.barsperstaff, multilineVars.staffnonote, multilineVars.openSlurs);
+			multilineVars.openSlurs = tune.cleanUp(pl, ph, multilineVars.barsperstaff, multilineVars.staffnonote, multilineVars.openSlurs, "slurs");
+			multilineVars.openDangers = tune.cleanUp(pl, ph, multilineVars.barsperstaff, multilineVars.staffnonote, multilineVars.openDangers, "dangers");
 		} catch (err) {
 			if (err !== "normal_abort")
 				throw err;
