@@ -31,6 +31,16 @@ window.ABCJS.parse.Parse = function() {
 		return tune;
 	};
 
+	var firstPart = 0;
+	var count = 1;
+	var tub =[];
+	var soprano = [];
+	var alto = [];
+	var tenor = [];
+	var bass = [];
+	
+	var test = [];
+	
 	//Parallel
 	var harmoChordPre = [];
 	var harmoIndexPre;
@@ -38,41 +48,77 @@ window.ABCJS.parse.Parse = function() {
 	var conChord = 0;
 	var noteNum = function(inNote) {
 		switch(inNote) {
-			case "C": return 1;
-			case "^C": return 2;
-			case "_D": return 2;
-			case "D": return 3;
-			case "^D": return 4;
-			case "_E": return 4;
-			case "E": return 5;
-			case "F": return 6;
-			case "^F": return 7;
-			case "_G": return 7;
-			case "G": return 8;
-			case "^G": return 9;
-			case "_A": return 9;
-			case "A": return 10;
-			case "^A": return 11;
-			case "_B": return 11;
-			case "B": return 12;
+			case "C,": return 1;
+			case "^C,": return 2;
+			case "_D,": return 2;
+			case "D,": return 3;
+			case "^D,": return 4;
+			case "_E,": return 4;
+			case "E,": return 5;
+			case "F,": return 6;
+			case "^F,": return 7;
+			case "_G,": return 7;
+			case "G,": return 8;
+			case "^G,": return 9;
+			case "_A,": return 9;
+			case "A,": return 10;
+			case "^A,": return 11;
+			case "_B,": return 11;
+			case "B,": return 12;
 			
-			case "c": return 13;
-			case "^c": return 14;
-			case "_d": return 14;
-			case "d": return 15;
-			case "^d": return 16;
-			case "_e": return 16;
-			case "e": return 17;
-			case "f": return 18;
-			case "^f": return 19;
-			case "_g": return 19;
-			case "g": return 20;
-			case "^g": return 21;
-			case "_a": return 21;
-			case "a": return 22;
-			case "^a": return 23;
-			case "_b": return 23;
-			case "b": return 24;
+			case "C": return 13;
+			case "^C": return 14;
+			case "_D": return 14;
+			case "D": return 15;
+			case "^D": return 16;
+			case "_E": return 16;
+			case "E": return 17;
+			case "F": return 18;
+			case "^F": return 19;
+			case "_G": return 19;
+			case "G": return 20;
+			case "^G": return 21;
+			case "_A": return 21;
+			case "A": return 22;
+			case "^A": return 23;
+			case "_B": return 23;
+			case "B": return 24;
+			
+			case "c": return 25;
+			case "^c": return 26;
+			case "_d": return 26;
+			case "d": return 27;
+			case "^d": return 28;
+			case "_e": return 29;
+			case "e": return 30;
+			case "f": return 31;
+			case "^f": return 32;
+			case "_g": return 32;
+			case "g": return 33;
+			case "^g": return 34;
+			case "_a": return 34;
+			case "a": return 35;
+			case "^a": return 36;
+			case "_b": return 36;
+			case "b": return 37;
+			
+			case "c'": return 25;
+			case "^c'": return 26;
+			case "_d'": return 26;
+			case "d'": return 27;
+			case "^d'": return 28;
+			case "_e'": return 29;
+			case "e'": return 30;
+			case "f'": return 31;
+			case "^f'": return 32;
+			case "_g'": return 32;
+			case "g'": return 33;
+			case "^g'": return 34;
+			case "_a'": return 34;
+			case "a'": return 35;
+			case "^a'": return 36;
+			case "_b'": return 36;
+			case "b'": return 37;
 			
 			default: break;
 		}
@@ -141,7 +187,6 @@ window.ABCJS.parse.Parse = function() {
 			this.ornamentPosition = "auto";
 			this.volumePosition = "auto";
 			this.openSlurs = [];
-			this.openDangers = [];
 		},
 		differentFont: function(type, defaultFonts) {
 			if (this[type].decoration !== defaultFonts[type].decoration) return true;
@@ -678,7 +723,7 @@ window.ABCJS.parse.Parse = function() {
 	var getCoreNote = function(line, index, el, canHaveBrokenRhythm) {
 		//var el = { startChar: index };
 		var isComplete = function(state) {
-			return (state == 'startDanger' || state === 'octave' || state === 'duration' || state === 'Zduration' || state === 'broken_rhythm' || state === 'end_slur');
+			return (state === 'octave' || state === 'duration' || state === 'Zduration' || state === 'broken_rhythm' || state === 'end_slur');
 		};
 		var state = 'startSlur';
 		var durationSetByPreviousNote = false;
@@ -697,10 +742,8 @@ window.ABCJS.parse.Parse = function() {
 					break;
 					
 				case '/':
-					if (state === 'startSlur') {
-						state = 'startDanger';
-						if (el.startDanger === undefined) el.startDanger = 1; else el.startDanger++;
-					} else if (isComplete(state)) {el.endChar = index;return el;}
+					if (el.startDanger === undefined) el.startDanger = 1; else el.startDanger++;
+					if (isComplete(state)) {el.endChar = index;return el;}
 					else return null;
 					break;
 				case '\\':
@@ -740,7 +783,7 @@ window.ABCJS.parse.Parse = function() {
 				case 'e':
 				case 'f':
 				case 'g':
-					if (state === 'startDanger' || state === 'startSlur' || state === 'sharp2' || state === 'flat2' || state === 'pitch') {
+					if (state === 'startSlur' || state === 'sharp2' || state === 'flat2' || state === 'pitch') {
 						el.pitch = pitches[line.charAt(index)];
 						state = 'octave';
 						// At this point we have a valid note. The rest is optional. Set the duration in case we don't get one below
@@ -767,7 +810,7 @@ window.ABCJS.parse.Parse = function() {
 				case 'y':
 				case 'z':
 				case 'Z':
-					if (state === 'startSlur' || state === 'startDanger') {
+					if (state === 'startSlur') {
 						el.rest = { type: rests[line.charAt(index)] };
 						// There shouldn't be some of the properties that notes have. If some sneak in due to bad syntax in the abc file,
 						// just nix them here.
@@ -834,7 +877,7 @@ window.ABCJS.parse.Parse = function() {
 					} else return null;
 					break;
 				case '-':
-					if (state === 'startSlur' || state === 'startDanger') {
+					if (state === 'startSlur') {
 						// This is the first character, so it must have been meant for the previous note. Correct that here.
 						tune.addTieToLastNote();
 						el.endTie = true;
@@ -945,12 +988,14 @@ window.ABCJS.parse.Parse = function() {
 			if (multilineVars.currentVoice.style)
 				params.style = multilineVars.currentVoice.style;
 		}
-		var isFirstVoice = multilineVars.currentVoice === undefined || (multilineVars.currentVoice.staffNum ===  0 && multilineVars.currentVoice.index ===  0);
-		if (multilineVars.barNumbers === 0 && isFirstVoice && multilineVars.currBarNumber !== 1)
-			params.barNumber = multilineVars.currBarNumber;
 		tune.startNewLine(params);
 
 		multilineVars.partForNextLine = "";
+		if (multilineVars.currentVoice === undefined || (multilineVars.currentVoice.staffNum === multilineVars.staves.length-1 && multilineVars.staves[multilineVars.currentVoice.staffNum].numVoices-1 === multilineVars.currentVoice.index)) {
+			//multilineVars.meter = null;
+			if (multilineVars.barNumbers === 0)
+				multilineVars.barNumOnNextNote = multilineVars.currBarNumber;
+		}
 	}
 
 	var letter_to_grace =  function(line, i) {
@@ -1076,7 +1121,7 @@ window.ABCJS.parse.Parse = function() {
 	// double-quote: chord symbol
 	// less-than, greater-than, slash: duration
 	// back-tick, space, tab: space
-	var nonDecorations = "ABCDEFGabcdefgxyzZ[]|^_{";	// use this to prescreen so we don't have to look for a decoration at every note.
+	var nonDecorations = "ABCDEFGabcdefgxyzZ[]|^_{,'";	// use this to prescreen so we don't have to look for a decoration at every note.
 
 	var parseRegularMusicLine = function(line) {
 		header.resolveTempo();
@@ -1248,12 +1293,9 @@ window.ABCJS.parse.Parse = function() {
 						else if (bar.endEnding)
 							multilineVars.barFirstEndingNum = undefined;
 						if (bar.type !== 'bar_invisible' && multilineVars.measureNotEmpty) {
-							var isFirstVoice = multilineVars.currentVoice === undefined || (multilineVars.currentVoice.staffNum ===  0 && multilineVars.currentVoice.index ===  0);
-							if (isFirstVoice) {
-								multilineVars.currBarNumber++;
-								if (multilineVars.barNumbers && multilineVars.currBarNumber % multilineVars.barNumbers === 0)
-									bar.barNumber = multilineVars.currBarNumber;
-							}
+							multilineVars.currBarNumber++;
+							if (multilineVars.barNumbers && multilineVars.currBarNumber % multilineVars.barNumbers === 0)
+								multilineVars.barNumOnNextNote = multilineVars.currBarNumber;
 						}
 						multilineVars.addFormattingOptions(el, tune.formatting, 'bar');
 						tune.appendElement('bar', startOfLine+i, startOfLine+i+ret[0], bar);
@@ -1294,7 +1336,7 @@ window.ABCJS.parse.Parse = function() {
 
 					// handle chords.
 					if (line.charAt(i) === '[') {
-						//
+						// harmony by Chord
 						var harmoChord = ['['];
 						var harmoIndex = i;
 						if(conChord > 0)
@@ -1311,6 +1353,17 @@ window.ABCJS.parse.Parse = function() {
 						while (!done) {
 							var chordNote = getCoreNote(line, i, {}, false);
 							harmoChord.push(line.charAt(i));
+							//======== ======== ======== ======== ======== ======== tub ======== ======== ======== ======== ======== ========
+							var tubNote = line.charAt(i);
+							var octaveCk = line.charAt(i+1);
+							if(tubNote != ']'){
+								if(octaveCk == "'" || octaveCk == ","){
+									tubNote = tubNote + octaveCk;
+								}
+								tub.push(tubNote);
+								//test.push(tune.getNumLines())
+							}
+							//======== ======== ======== ======== ======== ======== tub ======== ======== ======== ======== ======== ========
 							if (chordNote !== null) {
 								if (chordNote.end_beam) {
 									el.end_beam = true;
@@ -1418,7 +1471,10 @@ window.ABCJS.parse.Parse = function() {
 									if (chordDuration !== null) {
 										el.duration = el.duration * chordDuration;
 									}
-									
+									if (multilineVars.barNumOnNextNote) {
+										el.barNumber = multilineVars.barNumOnNextNote;
+										multilineVars.barNumOnNextNote = null;
+									}
 									multilineVars.addFormattingOptions(el, tune.formatting, 'note');
 									tune.appendElement('note', startOfLine+chordStartChar, startOfLine+i, el);
 									multilineVars.measureNotEmpty = true;
@@ -1431,10 +1487,13 @@ window.ABCJS.parse.Parse = function() {
 						//Harmony check
 						if(conChord == 2) {
 							var harmoChk= parallelHarmonyCheck(harmoChordPre,harmoChord);
+							//window.alert(harmoChk);
+							/*
 							if(harmoChk.charAt(0) == 1)
 								warnChord("Consecutive fifths found!",linePre,harmoIndexPre,harmoChordPre,harmoChord);
 							if(harmoChk.charAt(1) == 1) 
 								warnChord("Consecutive octave found!",linePre,harmoIndexPre,harmoChordPre,harmoChord);
+							*/
 						}
 						harmoChordPre = harmoChord;
 						harmoIndexPre = harmoIndex;
@@ -1517,6 +1576,10 @@ window.ABCJS.parse.Parse = function() {
 								el.duration = durationOfMeasure(multilineVars);
 							}
 
+							if (multilineVars.barNumOnNextNote) {
+								el.barNumber = multilineVars.barNumOnNextNote;
+								multilineVars.barNumOnNextNote = null;
+							}
 							multilineVars.addFormattingOptions(el, tune.formatting, 'note');
 							tune.appendElement('note', startOfLine+startI, startOfLine+i, el);
 							multilineVars.measureNotEmpty = true;
@@ -1531,8 +1594,90 @@ window.ABCJS.parse.Parse = function() {
 					}
 				}
 			}
+		}//tub
+		//window.alert(tub);
+		if(tub.length > 0){
+			
+			if(count == 1){
+				firstPart = tub.length;
+				for (var i = 0; i < tub.length; i++) {
+					if(i%2==0){
+						soprano.push(tub[i]);
+						//console.log(tub[i] + " added to soprano.");
+					}else{
+						alto.push(tub[i]);
+						//console.log(tub[i] + " added to alto.");
+					}
+				}
+			}else if(count == 2){					
+				for (var i = firstPart; i < tub.length; i++) {
+					if(i%2==0){
+						tenor.push(tub[i]);
+						//console.log(tub[i] + " added to tenor.");
+					}else{
+						bass.push(tub[i]);
+						//console.log(tub[i] + " added to bass.");
+					}
+				}
+				
+				//Tub Parallel Check here
+				for (var i = 0; i < soprano.length; i++) {
+					//bass tenor
+					if(noteNum(tenor[i]) - noteNum(bass[i]) == 7){
+						/***console.log("Fifth found [case 1] > " + bass[i] + " and " + tenor[i]);***/
+						if(noteNum(tenor[i+1]) - noteNum(bass[i+1]) == 7){
+							warnParallel(5, bass[i], tenor[i], bass[i+1], tenor[i+1],"B&T");
+						}
+					}else if(noteNum(tenor[i]) - noteNum(bass[i]) == 12){
+						if(noteNum(tenor[i+1]) - noteNum(bass[i+1]) == 12){
+							warnParallel(8, bass[i], tenor[i], bass[i+1], tenor[i+1],"B&T");
+						}
+					}
+					
+					//TODO apply to all these
+					//VVVVVVVVVVVVVVVVVV
+					//bass alto
+					//bass soprano
+					//tenor alto
+					//tenor soprano
+					//alto sopran		
+					
+				}
+				
+				//testing HarmCheck
+				/*for (var i = 0; i < tub.length; i++){
+					console.log(noteNum(tub[i]));
+					if(noteNum(tub[i]) != null){
+						test.push(noteNum(tub[i]));
+					}
+				}*/
+				
+				/*console.log(soprano);
+				console.log(alto);
+				console.log(tenor);
+				console.log(bass);*/
+			}
+			
+			count++;
+			
+			
+			
+			//document.getElementById("demo2").innerHTML = harmoChord;
 		}
+		
+		
 	};
+	
+	var warnParallel = function colorTrace(parallel, t1, l1, t2, l2, comment) {
+		if(parallel == 5){
+			console.log("%c[HarmonyChecker] %c!!Parallel 5th!! %c" + comment, "color:black;font-weight:bold;", "color:red;font-weight:bold;", "color:#cccccc;font-weight:normal;border: 1px solid #cccccc");
+		}else{
+			console.log("%c[HarmonyChecker] %c!!Parallel 8th!! %c" + comment, "color:black;font-weight:bold;", "color:red;font-weight:bold;", "color:#cccccc;font-weight:normal;border: 1px solid #cccccc");
+		}
+		
+		console.log(" >>>> " + t1 + " > " + t2);
+		console.log(" >>>> " + l1 + " > " + l2);
+	}
 
 	var parseLine = function(line) {
 		var ret = header.parseHeader(line);
@@ -1670,8 +1815,7 @@ window.ABCJS.parse.Parse = function() {
 				ph = pl;
 				pl = x;
 			}
-			multilineVars.openSlurs = tune.cleanUp(pl, ph, multilineVars.barsperstaff, multilineVars.staffnonote, multilineVars.openSlurs, "slurs");
-			multilineVars.openDangers = tune.cleanUp(pl, ph, multilineVars.barsperstaff, multilineVars.staffnonote, multilineVars.openDangers, "dangers");
+			multilineVars.openSlurs = tune.cleanUp(pl, ph, multilineVars.barsperstaff, multilineVars.staffnonote, multilineVars.openSlurs);
 		} catch (err) {
 			if (err !== "normal_abort")
 				throw err;
